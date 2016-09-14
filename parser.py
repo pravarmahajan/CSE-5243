@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import os
 import glob
+import json
 
 path = "data/"
 result = []
@@ -32,9 +33,8 @@ for infile in glob.glob(os.path.join(path, "*.sgm")):
 		result.append((tit, top, plc, bd))
 		
 
-with open(data + "output.txt","w") as myfile:
-	for row in result:
-		print >> myfile, row
+myfile = open(path+"output.txt", "w")
+json.dump(result, myfile, indent=4, separators=(',', ':'))
 
 del result[:]
 
