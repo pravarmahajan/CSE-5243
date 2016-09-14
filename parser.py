@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import os
 import glob
 
-path = "/home/anu/Documents/"
+path = "data/"
 result = []
 for infile in glob.glob(os.path.join(path, "*.sgm")):
 	f = open(infile,'r')
@@ -32,7 +32,7 @@ for infile in glob.glob(os.path.join(path, "*.sgm")):
 		result.append((tit, top, plc, bd))
 		
 
-with open("output.txt","w") as myfile:
+with open(data + "output.txt","w") as myfile:
 	for row in result:
 		print >> myfile, row
 
