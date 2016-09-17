@@ -43,7 +43,7 @@ def parse_xml_files():
                         result.append(data.copy())
 
         myfile = open(os.path.join(
-                        preprocessing_config.output_data_dir, "output.txt"),
+                        preprocessing_config.output_data_dir, "parsed_documents.txt"),
                         "w"
                     )
         json.dump(result, myfile, indent=4, separators=(',', ':'))
