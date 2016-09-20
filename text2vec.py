@@ -78,14 +78,26 @@ def construct_word_freq_matrix(parsed_documents):
                            tokenizer=RegexTokenizerAndStemmer(),
                            lowercase=True,
                            stop_words=nltk.corpus.stopwords.words('english'),
-                           strip_accents='ascii'
+                           strip_accents='ascii',
+                      )
+    bigram_vectorizer = CountVectorizer(
+                           tokenizer=RegexTokenizerAndStemmer(),
+                           lowercase=True,
+                           stop_words=nltk.corpus.stopwords.words('english'),
+                           strip_accents='ascii',
+                           ngram_range=(2,2)
                       )
     X_freq = count_vectorizer.fit_transform(documents_as_string)
+    X_bigram_freq = bigram_vectorizer.fit_transform(documents_as_string)
 
     write_sparse_data_matrix_to_file(X_freq, "word_freq_matrix")
+    write_sparse_data_matrix_to_file(X_bigram_freq, "bigram_freq_matrix")
+
     print "successfully saved word frequency matrix"
 
-    save_features_to_file(count_vectorizer)
+    save_features_to_file(count_vectorizer, "unigram")
+    save_features_to_file(bigram_vectorizer, "bigram")
+
     save_labels_to_file(topics_labels, 'topics_labels.dat')
     save_labels_to_file(places_labels, 'places_labels.dat')
 
@@ -106,9 +118,10 @@ def construct_tf_idf_matrix(X_freq):
     print "successfully saved tf-idf matrix"
     return X_tfidf
 
-def save_features_to_file(vectorizer):
+def save_features_to_file(vectorizer, prefix):
     features = vectorizer.get_feature_names()
-    full_filename = os.path.join(preprocessing_config.output_data_dir, 'features.dat')
+    full_filename = os.path.join(preprocessing_config.output_data_dir,
+                                 prefix + '_features.dat')
     f = open(full_filename, 'w')
     f.write("\n".join(features))
     f.close()
@@ -119,9 +132,12 @@ def write_sparse_data_matrix_to_file(X, filename):
     scipy.io.mmwrite(full_filename, X)
 
 def plot_freq_ranking_graph(X):
-    total_word_freq = sorted(numpy.array(X.sum(0))[0], reverse=True)[1:5000]
-    plt.xlabel("Ranking of Words")
-    plt.ylabel("Words Frequency")
+    total_word_freq = sorted(numpy.array(X.sum(0))[0], reverse=True)
+    plt.xlabel("Log Ranking of Words")
+    plt.ylabel("Log Words Frequency")
+    plt.yscale('log', nonposy='clip')
+    plt.xscale('log', nonposy='clip')
     plt.plot(range(1, len(total_word_freq)+1), total_word_freq)
     plt.savefig('plots/word_freq_graph.png', bbox_inches='tight')
+    print "Plot indicating Zipf's law saved to plots/word_freq_graph.png"
     plt.close()

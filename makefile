@@ -3,3 +3,4 @@ all:
 clean:
 	rm *.pyc
 	rm data/output/*.*
+	rm plots/*.*

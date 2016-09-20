@@ -14,12 +14,13 @@ def main():
     stored as topics_labels.dat and places_labels.dat'''
     print "Constructing word frequency matrix"
     X_freq = text2vec.construct_word_freq_matrix(parsed_documents)
-
     
     '''Construct tf-idf matrix given word frequency matrix. The matrix is stored
     in output_data_dir'''
     print "Constructing tf-idf matrix"
     X_tfidf = text2vec.construct_tf_idf_matrix(X_freq)
+
+    text2vec.plot_freq_ranking_graph(X_freq)
 
 if __name__ == "__main__":
     main()
