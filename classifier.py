@@ -1,10 +1,14 @@
 import sklearn.cross_validation as CV
 import numpy.random as rnd
-
 from sklearn import neighbors
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import classification_report
+import os
+import json
+import pickle
+import preprocessing_config
+import text2vec
 
 '''Perform an 80-20 split on the input data. Output is a tuple in this
 format: (X_train, X_test, Y_train, Y_test)'''
@@ -35,3 +39,21 @@ def classifiy_knn(train_data, train_labels, test_data, test_labels):
 
     Y_pred = clf.predict(X_test)
     print classification_report(Y_test, Y_pred, target_names=mlb.classes_)
+
+def filter_topics():
+    my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("tf_idf_matrix")
+    with open(os.path.join(preprocessing_config.output_data_dir, "topics_labels.dat"), 'r') as f:
+    	my_topics_labels = f.readlines()
+
+    a = []
+    b = []
+    for label in my_topics_labels:
+        lable = label.strip()
+    	if label != "\n":
+    		tf_idf_ind = my_topics_labels.index(label)
+    		#my_topics_labels.remove(label)
+    		#b = [x for x in a if x != 2]
+            a.append(label)
+
+    print(a)
+filter_topics()
