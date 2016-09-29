@@ -1,12 +1,13 @@
-import sklearn.cross_validation as CV
 import numpy.random as rnd
+import sklearn.cross_validation as CV
 from sklearn import neighbors
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import classification_report
+from scipy.sparse import diags
+
 import os
-import json
-import pickle
+import pdb
 import preprocessing_config
 import text2vec
 
@@ -42,18 +43,21 @@ def classifiy_knn(train_data, train_labels, test_data, test_labels):
 
 def filter_topics():
     my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("tf_idf_matrix")
+    my_tf_idf_matrix = my_tf_idf_matrix.tocsr()
     with open(os.path.join(preprocessing_config.output_data_dir, "topics_labels.dat"), 'r') as f:
     	my_topics_labels = f.readlines()
 
     a = []
-    b = []
+    rows_to_keep = []
+    idx = 0
     for label in my_topics_labels:
-        lable = label.strip()
-    	if label != "\n":
-    		tf_idf_ind = my_topics_labels.index(label)
-    		#my_topics_labels.remove(label)
-    		#b = [x for x in a if x != 2]
+        label = label.strip()
+    	if label != "":
             a.append(label)
+            rows_to_keep.append(idx)
+        idx += 1
 
-    print(a)
-filter_topics()
+    my_tf_idf_matrix = my_tf_idf_matrix[rows_to_keep, :]
+
+    return my_tf_idf_matrix, a
+
