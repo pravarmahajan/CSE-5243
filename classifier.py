@@ -1,47 +1,104 @@
 import numpy as np
 import numpy.random as rnd
 import sklearn.cross_validation as CV
+import scipy.sparse
 
 from sklearn import neighbors
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.metrics import classification_report
+import sklearn.metrics
+import sklearn.utils
+
 from scipy.sparse import diags
 
 import os
 import pdb
 import preprocessing_config
 import text2vec
+import time
 
 '''Perform an 80-20 split on the input data. Output is a tuple in this
-format: (X_train, X_test, Y_train, Y_test)'''
+format: (X_train, X_test, Y_train, Y_test). The problem here is that the labels
+have only one or two instances, because of which they appear only in the
+training set or only in the test set. We will randomly split the data 80-20
+then copy over points which exist only in test set and not in training set
+and vice-versa. '''
+
 def split_data_80_20(train_data, train_labels):
-    return CV.train_test_split(train_data, train_labels, test_size=0.2,
-    random_state=rnd.RandomState())
+    X, Y = sklearn.utils.shuffle(train_data, train_labels, random_state =
+                                    rnd.RandomState())
+
+    n_rows_for_train = int(X.shape[0] * 0.8)
+
+    X_train = X[:n_rows_for_train, :]
+    X_test = X[n_rows_for_train:, :]
+    Y_train = Y[:n_rows_for_train]
+    Y_test = Y[n_rows_for_train: ]
+
+    training_only_labels = set(item for sublist in Y_train for item in sublist)
+    testing_only_labels = set(item for sublist in Y_test for item in sublist)
+
+    rows_to_copy_over = []
+    for row_num in range(Y_train.shape[0]):
+        if not testing_only_labels >= set(Y_train[row_num]):
+            rows_to_copy_over.append(row_num)
+    
+    X_test= scipy.sparse.vstack((X_test, X_train[rows_to_copy_over]))
+    Y_test = np.append(Y_test, Y_train[rows_to_copy_over])
+
+    rows_to_copy_over = []
+    for row_num in range(Y_test.shape[0]):
+        if not training_only_labels >= set(Y_test[row_num]):
+            rows_to_copy_over.append(row_num)
+
+    X_train = scipy.sparse.vstack((X_train, X_test[rows_to_copy_over]))
+    Y_train = np.append(Y_train, Y_test[rows_to_copy_over])
+
+    return X_train, Y_train, X_test, Y_test
+
+def binarize_labels(labels, binarizer=None):
+    if binarizer == None:
+        binarizer = MultiLabelBinarizer()
+        Y = binarizer.fit_transform(labels)
+    else:
+        Y = binarizer.transform(labels)
+
+    return Y, binarizer
 
 '''Perform KNN classification on the input dataset. Loops through different
 values of k automatically and chooses the best value based on performance on the
 input set. Prints the accuracy on the test set'''
-def classify_knn(train_data, train_labels, test_data, test_labels):
+def train_knn_classifier(train_data, train_labels):
     param_grid = [
-        {'weights': ['uniform', 'distance']},
-        {'n_neighbors': np.logspace(0, 8, num=9, base=2)}
+        {'weights': ['uniform'], 'n_neighbors': np.logspace(0, 8, num=9, base=2)},
+        {'weights': ['distance'], 'n_neighbors': np.logspace(0, 8, num=9, base=2)}
     ]   #tuning parameters, GridSearch will loop through these to get
         #the best set of params automatically
 
-    mlb = MultiLabelBinarizer()
-    X_train = train_data
-    #X_test = test_data
-    Y_train = mlb.fit_transform(train_labels)
-    #Y_test = mlb.transform(test_labels)
-
-    clf = GridSearchCV(neighbors.KNeighborsClassifier(), param_grid, cv=5)
-    clf.fit(X_train, Y_train)
+    time1 = time.time()
+    clf = GridSearchCV(neighbors.KNeighborsClassifier(), param_grid, cv=5,
+                        scoring="f1_macro")
+    clf.fit(train_data, train_labels)
+    time2 = time.time()
+    print "Time to train = %.2f secs" %(time2-time1)
+    print "Best params obtained:"
     print clf.best_params_
-    print clf.grid_scores_
+    return clf
 
-    #Y_pred = clf.predict(X_test)
-    #print classification_report(Y_test, Y_pred, target_names=mlb.classes_)
+def test_knn_classifier(clf, test_data, test_labels):
+    time1 = time.time()
+    Y_pred = clf.predict(test_data)
+    time2 = time.time()
+    print "Accuracy score = %.2f" %sklearn.metrics.accuracy_score(test_labels, Y_pred)
+    print "Precision score = %.2f" %sklearn.metrics.precision_score(test_labels,
+                                    Y_pred, average = "macro")
+    print "Recall score = %.2f" %sklearn.metrics.recall_score(test_labels,
+                                    Y_pred, average = "macro")
+    print "F1 score = %.2f" %sklearn.metrics.recall_score(test_labels,
+                                    Y_pred, average = "macro")
+    print "Time to test = %.2f secs" %(time2-time1)
+
+    return Y_pred
 
 def filter_topics():
     my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("tf_idf_matrix")
@@ -60,6 +117,16 @@ def filter_topics():
         idx += 1
 
     X = my_tf_idf_matrix[rows_to_keep, :]
-    Y = [s.split(',') for s in a]
+    Y = np.array([s.split(',') for s in a])
     return X, Y
 
+X, Y = filter_topics()
+X_train, Y_train, X_test, Y_test = split_data_80_20(X, Y)
+
+Y_train_bin, binarizer = binarize_labels(Y_train)
+Y_test_bin, binarizer = binarize_labels(Y_test, binarizer)
+
+clf = train_knn_classifier(X_train, Y_train_bin)
+
+Y_pred_bin = test_knn_classifier(clf, X_test, Y_test_bin)
+Y_pred = binarizer.inverse_transform(Y_pred_bin)
