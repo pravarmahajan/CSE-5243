@@ -10,7 +10,7 @@ import sklearn.metrics
 import sklearn.utils
 
 from scipy.sparse import diags
-
+from sklearn import tree
 import os
 import pdb
 import preprocessing_config
@@ -104,14 +104,14 @@ def filter_topics():
     my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("tf_idf_matrix")
     my_tf_idf_matrix = my_tf_idf_matrix.tocsr()
     with open(os.path.join(preprocessing_config.output_data_dir, "topics_labels.dat"), 'r') as f:
-    	my_topics_labels = f.readlines()
+        my_topics_labels = f.readlines()
 
     a = []
     rows_to_keep = []
     idx = 0
     for label in my_topics_labels:
         label = label.strip()
-    	if label != "":
+        if label != "":
             a.append(label)
             rows_to_keep.append(idx)
         idx += 1
@@ -119,6 +119,29 @@ def filter_topics():
     X = my_tf_idf_matrix[rows_to_keep, :]
     Y = np.array([s.split(',') for s in a])
     return X, Y
+
+def classify_decision_tree(train_data, train_labels, test_data, test_labels):
+    mlb = MultiLabelBinarizer()
+    X_train = train_data
+    X_test = test_data
+    Y_train = mlb.fit_transform(train_labels)
+    Y_test = mlb.transform(test_labels)
+
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(X_train, Y_train)
+    #print clf.score(X_test, Y_test, sample_weight=None)
+    print clf.feature_importances_
+
+    #Y_pred = clf.predict(X_test)
+    #print classification_report(Y_test, Y_pred, target_names=mlb.classes_)
+
+def main():
+    X,Y = filter_topics()
+    X_train,X_test,Y_train,Y_test = split_data_80_20(X,Y)
+    classify_decision_tree(X_train, X_test, X_test, Y_test)
+
+main()
+
 
 X, Y = filter_topics()
 X_train, Y_train, X_test, Y_test = split_data_80_20(X, Y)
