@@ -29,7 +29,6 @@ def split_data_80_20(train_data, train_labels):
                                     rnd.RandomState())
 
     n_rows_for_train = int(X.shape[0] * 0.8)
-
     X_train = X[:n_rows_for_train, :]
     X_test = X[n_rows_for_train:, :]
     Y_train = Y[:n_rows_for_train]
@@ -43,7 +42,7 @@ def split_data_80_20(train_data, train_labels):
         if not testing_only_labels >= set(Y_train[row_num]):
             rows_to_copy_over.append(row_num)
     
-    X_test= scipy.sparse.vstack((X_test, X_train[rows_to_copy_over]))
+    X_test= scipy.sparse.vstack((X_test, X_train[rows_to_copy_over])).tocsr()
     Y_test = np.append(Y_test, Y_train[rows_to_copy_over])
 
     rows_to_copy_over = []
@@ -51,7 +50,7 @@ def split_data_80_20(train_data, train_labels):
         if not training_only_labels >= set(Y_test[row_num]):
             rows_to_copy_over.append(row_num)
 
-    X_train = scipy.sparse.vstack((X_train, X_test[rows_to_copy_over]))
+    X_train = scipy.sparse.vstack((X_train, X_test[rows_to_copy_over])).tocsr()
     Y_train = np.append(Y_train, Y_test[rows_to_copy_over])
 
     return X_train, Y_train, X_test, Y_test
@@ -120,36 +119,54 @@ def filter_topics():
     Y = np.array([s.split(',') for s in a])
     return X, Y
 
-def classify_decision_tree(train_data, train_labels, test_data, test_labels):
-    mlb = MultiLabelBinarizer()
-    X_train = train_data
-    X_test = test_data
-    Y_train = mlb.fit_transform(train_labels)
-    Y_test = mlb.transform(test_labels)
+'''Perform decision tree classification on the input dataset. Prints the time to train the data'''
+def train_decision_tree_classifier(train_data, train_labels):
+    time1 = time.time()
+    clf  = tree.DecisionTreeClassifier()
 
-    clf = tree.DecisionTreeClassifier()
-    clf = clf.fit(X_train, Y_train)
-    #print clf.score(X_test, Y_test, sample_weight=None)
+    clf.fit(train_data, train_labels)
+    time2 = time.time()
+    print "Time to train = %.2f secs" %(time2-time1)
+    print "Best params obtained:"
     print clf.feature_importances_
+    return clf
 
-    #Y_pred = clf.predict(X_test)
-    #print classification_report(Y_test, Y_pred, target_names=mlb.classes_)
+'''Tests the test data using training data. It compares current test_label with the observed labels. Accuracy, Precision, Recall and Time to test are also computed. '''
+def test_decision_tree_classifier(clf, test_data, test_labels):
+    time1 = time.time()
+    Y_pred = clf.predict(test_data)
+    time2 = time.time()
+    print "Accuracy score = %.2f" %sklearn.metrics.accuracy_score(test_labels, Y_pred)
+    print "Precision score = %.2f" %sklearn.metrics.precision_score(test_labels,
+                                    Y_pred, average = "macro")
+    print "Recall score = %.2f" %sklearn.metrics.recall_score(test_labels,
+                                    Y_pred, average = "macro")
+    print "F1 score = %.2f" %sklearn.metrics.recall_score(test_labels,
+                                    Y_pred, average = "macro")
+    print "Time to test = %.2f secs" %(time2-time1)
+
+    return Y_pred
 
 def main():
-    X,Y = filter_topics()
-    X_train,X_test,Y_train,Y_test = split_data_80_20(X,Y)
-    classify_decision_tree(X_train, X_test, X_test, Y_test)
+    X, Y = filter_topics()
+    X_train, Y_train, X_test, Y_test = split_data_80_20(X, Y)
+    Y_train_bin, binarizer = binarize_labels(Y_train)
+    Y_test_bin, binarizer = binarize_labels(Y_test, binarizer)
+
+    clf = train_decision_tree_classifier(X_train, Y_train_bin)
+
+    Y_pred_bin = test_decision_tree_classifier(clf, X_test, Y_test_bin)
+    Y_pred = binarizer.inverse_transform(Y_pred_bin)
 
 main()
 
 
-X, Y = filter_topics()
-X_train, Y_train, X_test, Y_test = split_data_80_20(X, Y)
+#X, Y = filter_topics()
+#X_train, Y_train, X_test, Y_test = split_data_80_20(X, Y)
+#Y_train_bin, binarizer = binarize_labels(Y_train)
+#Y_test_bin, binarizer = binarize_labels(Y_test, binarizer)
 
-Y_train_bin, binarizer = binarize_labels(Y_train)
-Y_test_bin, binarizer = binarize_labels(Y_test, binarizer)
+#clf = train_knn_classifier(X_train, Y_train_bin)
 
-clf = train_knn_classifier(X_train, Y_train_bin)
-
-Y_pred_bin = test_knn_classifier(clf, X_test, Y_test_bin)
-Y_pred = binarizer.inverse_transform(Y_pred_bin)
+#Y_pred_bin = test_knn_classifier(clf, X_test, Y_test_bin)
+#Y_pred = binarizer.inverse_transform(Y_pred_bin)
