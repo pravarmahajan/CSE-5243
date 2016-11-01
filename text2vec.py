@@ -131,6 +131,11 @@ def write_sparse_data_matrix_to_file(X, filename):
     full_filename = os.path.join(preprocessing_config.output_data_dir, filename)
     scipy.io.mmwrite(full_filename, X)
 
+def load_sparse_matrix_from_file(filename):
+    full_filename = os.path.join(preprocessing_config.output_data_dir, filename)
+    X = scipy.io.mmread(full_filename)
+    return X
+
 def plot_freq_ranking_graph(X):
     total_word_freq = sorted(numpy.array(X.sum(0))[0], reverse=True)
     plt.xlabel("Log Ranking of Words")
