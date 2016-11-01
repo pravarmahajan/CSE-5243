@@ -21,6 +21,8 @@ import time
 ''' Filter out topics_labels and tf_idf_matrix points where topics_labels is not empty.'''
 def filter_topics():
     my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("tf_idf_matrix")
+    #my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("bigram_freq_matrix")
+    #my_tf_idf_matrix = text2vec.load_sparse_matrix_from_file("word_freq_matrix")
     my_tf_idf_matrix = my_tf_idf_matrix.tocsr()
     with open(os.path.join(preprocessing_config.output_data_dir, "topics_labels.dat"), 'r') as f:
         my_topics_labels = f.readlines()
@@ -120,7 +122,7 @@ def test_knn_classifier(clf, test_data, test_labels):
                                     Y_pred, average = "macro")
     print "Recall score = %.2f" %sklearn.metrics.recall_score(test_labels,
                                     Y_pred, average = "macro")
-    print "F1 score = %.2f" %sklearn.metrics.recall_score(test_labels,
+    print "F1 score = %.2f" %sklearn.metrics.f1_score(test_labels,
                                     Y_pred, average = "macro")
     print "Time to test = %.2f secs" %(time2-time1)
 
@@ -148,7 +150,7 @@ def test_decision_tree_classifier(clf, test_data, test_labels):
                                     Y_pred, average = "macro")
     print "Recall score = %.2f" %sklearn.metrics.recall_score(test_labels,
                                     Y_pred, average = "macro")
-    print "F1 score = %.2f" %sklearn.metrics.recall_score(test_labels,
+    print "F1 score = %.2f" %sklearn.metrics.f1_score(test_labels,
                                     Y_pred, average = "macro")
     print "Time to test = %.2f secs" %(time2-time1)
 
@@ -160,20 +162,17 @@ def main():
     Y_train_bin, binarizer = binarize_labels(Y_train)
     Y_test_bin, binarizer = binarize_labels(Y_test, binarizer)
 
+    print "Runnning Decision Tree....."
     clf = train_decision_tree_classifier(X_train, Y_train_bin)
 
     Y_pred_bin = test_decision_tree_classifier(clf, X_test, Y_test_bin)
     Y_pred = binarizer.inverse_transform(Y_pred_bin)
 
-main()
+    print "Running KNN...."
+    clf = train_knn_classifier(X_train, Y_train_bin)
 
+    Y_pred_bin = test_knn_classifier(clf, X_test, Y_test_bin)
+    Y_pred = binarizer.inverse_transform(Y_pred_bin)
 
-#X, Y = filter_topics()
-#X_train, Y_train, X_test, Y_test = split_data_80_20(X, Y)
-#Y_train_bin, binarizer = binarize_labels(Y_train)
-#Y_test_bin, binarizer = binarize_labels(Y_test, binarizer)
-
-#clf = train_knn_classifier(X_train, Y_train_bin)
-
-#Y_pred_bin = test_knn_classifier(clf, X_test, Y_test_bin)
-#Y_pred = binarizer.inverse_transform(Y_pred_bin)
+if __name__ == "__main__":
+    main()
