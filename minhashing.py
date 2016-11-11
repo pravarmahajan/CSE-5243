@@ -5,28 +5,28 @@ import numpy as np
 import scipy.io
 import scipy.sparse
 
-import pdb
-
 import minhashing_config
 
 def perform_LSH(shingled_documents, k):
-    num_docs = shingled_documents.shape[0]
-    permutations = generate_permutations(num_docs, k)
+    doc_length, num_docs = shingled_documents.shape
+    permutations = generate_permutations(doc_length, k)
     hashes = []
-    for perm in permutations():
-        perm_doc = np.nonzero(shingled_document[perm, :])
-        perm_doc = perm_doc.to_csc()
-        
+    for perm in permutations:
+        perm_doc = shingled_documents[perm, :]
+        perm_doc = perm_doc.tocsc()
+        doc_hash = [find_min_non_zero_idx(perm_doc.getcol(i)) for i in range(num_docs)]
         hashes.append(doc_hash)
-    permuted_docs = np.ndarray([shingled_documents[perm, :] for perm in permutations])
-    pdb.set_trace()
-    hashes = np.transpose(np.nonzero(permuted_docs))[0]
+    return np.array(hashes)
 
 def find_min_non_zero_idx(vector):
-    return vector.nonzero()[0,0]
+    return vector.nonzero()[0][0]
     
-def generate_permutations(num_docs, k):
-    return np.random.permutation(num_docs * k).reshape((k, num_docs))
+def generate_permutations(doc_length, k):
+    permutations = []
+    for i in range(k):
+        permutations.append(np.random.permutation(doc_length))
+    return permutations
+
 
 def load_sparse_data_matrix_from_file(filename):
     full_filename = os.path.join(minhashing_config.shingles_path, filename)
@@ -34,7 +34,7 @@ def load_sparse_data_matrix_from_file(filename):
 
 if __name__ == "__main__":
     num_shingles = 1
+    k = 100
     shingled_documents = load_sparse_data_matrix_from_file(str(num_shingles) + "_shingles")
     shingled_documents = np.transpose(shingled_documents).tocsr()
-    hashes = perform_LSH(shingled_documents, num_shingles)
-
+    hashes = perform_LSH(shingled_documents, k)

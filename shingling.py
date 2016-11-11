@@ -4,8 +4,7 @@ import nltk
 import numpy as np
 import os
 import scipy.io
-
-import pdb
+import json
 
 import parser
 import minhashing_config
@@ -22,10 +21,9 @@ ids.'''
 def create_word_shingles(parsed_documents, k):
 
     documents_as_string = []
-
     for data_element in parsed_documents:
         try:
-            if 'body' in data_element.keys():
+            if 'body' in data_element.keys() and data_element['body'] != '':
                 documents_as_string.append(data_element['body'])
 
         except Exception as e:
@@ -46,6 +44,8 @@ def create_word_shingles(parsed_documents, k):
                 )
 
     shingled_docs = shingler.fit_transform(documents_as_string)
+    shingled_docs = shingled_docs[shingled_docs.getnnz(1)>0]
+    pdb.set_trace()
     return shingled_docs, shingler.get_feature_names()
 
 def write_sparse_data_matrix_to_file(X, filename):
@@ -55,7 +55,8 @@ def write_sparse_data_matrix_to_file(X, filename):
 if __name__ == '__main__':
     num_shingles = 1
     print "Parsing..."
-    parsed_documents = parser.parse_xml_files()
+    with open('data/output/parsed_documents.txt') as f:
+        parsed_documents = json.load(f)
     print "Constructing %d shingles..." %num_shingles
     shingled_docs, feature_names = \
         create_word_shingles(parsed_documents, num_shingles)
