@@ -1,5 +1,8 @@
 import numpy as np
 from sklearn.metrics import jaccard_similarity_score
+import minhashconfig
+import os
+import scipy.io
 
 def jaccard_similarity(vector1, vector2):
     similarity = 0
@@ -14,14 +17,22 @@ def simple_similarity(vector1, vector2):
     similarity = similarity/len(vector1)
     return similarity
 
-if __name__ == "__main__":
-    vector1 = np.random.randint(2, size=1000)
-    vector2 = np.random.randint(2, size=1000)
-    jaccard_sim = jaccard_similarity(vector1, vector2)
-    print(jaccard_sim)
-    
-    vector1 = np.random.randint(20000, size=100)
-    vector2 = np.random.randint(20000, size=100)
+def jacc_sim_for_doc_collection(docs):
+    return sim_matrix
 
-    simple_sim = simple_similarity(vector1, vector2)
-    print(simple_sim)
+def simple_sim_for_doc_collection(docs):
+    return sim_matrix
+
+if __name__ == "__main__":
+    hashes_filename = os.path.join(minhashing_config.shingles_path,
+    minhashing_config.hashes_filename)
+    hashed_docs = np.loadtxt(hashes_filename, dtype='int')
+    hash_sim_matrix = simple_sim_for_doc_collection(hashed_docs)
+
+    shingles_filename = os.path.join(minhashing_config.shingles_path,
+    '1_shingles.dat')
+    shingles = scipy.io.mmread(shingles_filename)
+
+    jacc_sim_matrix = jacc_sim_for_doc_collection(shingles)
+
+    sse = compute_SSE(jacc_sim_matrix, hash_sim_matrix)

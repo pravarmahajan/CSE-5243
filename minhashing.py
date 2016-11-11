@@ -1,6 +1,6 @@
 import subprocess
 import glob
-import os
+import os.path
 import numpy as np
 import scipy.io
 import scipy.sparse
@@ -32,9 +32,16 @@ def load_sparse_data_matrix_from_file(filename):
     full_filename = os.path.join(minhashing_config.shingles_path, filename)
     return scipy.io.mmread(full_filename)
 
+def save_hashes(hashes):
+    filename = os.path.join(minhashing_config.shingles_path,
+                minhashing_config.hashes_filename)
+
+    np.savetxt(filename, hashes, fmt = '%d', delimiter = ' ')
+
 if __name__ == "__main__":
     num_shingles = 1
     k = 100
     shingled_documents = load_sparse_data_matrix_from_file(str(num_shingles) + "_shingles")
     shingled_documents = np.transpose(shingled_documents).tocsr()
     hashes = perform_LSH(shingled_documents, k)
+    save_hashes(hashes)
