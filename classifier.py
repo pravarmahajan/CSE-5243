@@ -131,7 +131,7 @@ def test_knn_classifier(clf, test_data, test_labels):
 '''Perform decision tree classification on the input dataset. Prints the time to train the data'''
 def train_decision_tree_classifier(train_data, train_labels):
     time1 = time.time()
-    clf  = tree.DecisionTreeClassifier(random_state=0)
+    clf  = tree.DecisionTreeClassifier(criterion='entropy', random_state=0)
 
     clf.fit(train_data, train_labels)
     time2 = time.time()
