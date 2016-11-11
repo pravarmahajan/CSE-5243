@@ -1,4 +1,3 @@
-import pdb
 import os
 
 import json
@@ -15,22 +14,7 @@ import scipy.io
 import matplotlib.pyplot as plt
 
 import preprocessing_config
-
-'''Creating a class for regex tokenizing and stemming. This will be used by
-   CountVectorizer for tokenizing. It uses small case alphabets for recognizing
-   words. Punctuations are ignored. Words are stemmed using Porter Stemmer
-   algorithm.
-   '''
-
-class RegexTokenizerAndStemmer(object):
-    def __init__(self):
-        self.stemmer = nltk.stem.porter.PorterStemmer()
-        self.regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[a-z]+')
-    def __call__(self, doc_string):
-        return [self.stemmer.stem(t) for t in self.regex_tokenizer.tokenize(
-                                                doc_string.lower()
-                                              )
-               ]
+from  regex_tokenizer_and_stemmer import RegexTokenizerAndStemmer
 
 '''Constructs word frequency matrix and returns it. The object type returned is
 scipy sparse matrix. Further, the matrix and the features are stored in
