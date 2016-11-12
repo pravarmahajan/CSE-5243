@@ -1,4 +1,4 @@
-from  regex_tokenizer_and_stemmer import RegexTokenizerAndStemmer
+from regex_tokenizer_and_stemmer import RegexTokenizerAndStemmer
 from sklearn.feature_extraction.text import CountVectorizer
 import nltk
 import numpy as np
@@ -45,7 +45,6 @@ def create_word_shingles(parsed_documents, k):
 
     shingled_docs = shingler.fit_transform(documents_as_string)
     shingled_docs = shingled_docs[shingled_docs.getnnz(1)>0]
-    pdb.set_trace()
     return shingled_docs, shingler.get_feature_names()
 
 def write_sparse_data_matrix_to_file(X, filename):
@@ -53,7 +52,7 @@ def write_sparse_data_matrix_to_file(X, filename):
     scipy.io.mmwrite(full_filename, X)
 
 if __name__ == '__main__':
-    num_shingles = 1
+    num_shingles = 5
     print "Parsing..."
     with open('data/output/parsed_documents.txt') as f:
         parsed_documents = json.load(f)
