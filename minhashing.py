@@ -4,6 +4,7 @@ import os.path
 import numpy as np
 import scipy.io
 import scipy.sparse
+import pdb
 
 import minhashing_config
 
@@ -33,10 +34,16 @@ def load_sparse_data_matrix_from_file(filename):
     return scipy.io.mmread(full_filename)
 
 def save_hashes(hashes):
+    num_hashes = hashes.shape[0]
     filename = os.path.join(minhashing_config.shingles_path,
-                minhashing_config.hashes_filename)
+                str(num_hashes) + '_' + minhashing_config.hashes_filename)
 
     np.savetxt(filename, hashes, fmt = '%d', delimiter = ' ')
+
+def load_hashes(num_hashes):
+    filename = os.path.join(minhashing_config.shingles_path,
+                str(num_hashes) + '_' + minhashing_config.hashes_filename)
+    return np.loadtxt(filename, dtype='int')
 
 if __name__ == "__main__":
     num_shingles = 1
