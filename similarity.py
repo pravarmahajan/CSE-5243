@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.metrics import jaccard_similarity_score
+from sklearn.metrics import mean_squared_error
 import minhashconfig
 import os
 import scipy.io
@@ -34,6 +35,10 @@ def simple_sim_for_doc_collection(docs):
             sim_matrix[j][i] = sim_matrix[i][j]
 
     return sim_matrix
+
+def compute_SSE(jacc_sim_matrix, hash_sim_matrix):
+    sse = mean_squared_error(jacc_sim_matrix, hash_sim_matrix)
+    return sse
 
 if __name__ == "__main__":
     hashes_filename = os.path.join(minhashing_config.shingles_path,
