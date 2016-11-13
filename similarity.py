@@ -18,9 +18,21 @@ def simple_similarity(vector1, vector2):
     return similarity
 
 def jacc_sim_for_doc_collection(docs):
+    w, h = 20000, 20000 
+    sim_matrix = [[0 for x in range(w)] for y in range(h)] 
+    for i in range(len(docs)):
+        for j in range(len(docs)):
+            sim_matrix[i][j] = jaccard_similarity(docs[i],docs[j])
+
     return sim_matrix
 
 def simple_sim_for_doc_collection(docs):
+    w, h = 20000, 20000 
+    sim_matrix = [[0 for x in range(w)] for y in range(h)] 
+    for i in range(len(docs)):
+        for j in range(len(docs)):
+            sim_matrix[i][j] = simple_similarity(docs[i],docs[j])
+
     return sim_matrix
 
 if __name__ == "__main__":
