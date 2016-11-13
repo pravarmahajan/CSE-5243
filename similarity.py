@@ -11,27 +11,27 @@ def jaccard_similarity(vector1, vector2):
 
 def simple_similarity(vector1, vector2):
     similarity = 0
-    for i in range(len(vector1)):
-        if vector1[i]==vector2[i]:
-            similarity += 1
+    similarity = np.sum(vector1 == vector2)
     similarity = similarity/len(vector1)
     return similarity
 
 def jacc_sim_for_doc_collection(docs):
-    w, h = 20000, 20000 
+    w = h = docs.shape[1]
     sim_matrix = [[0 for x in range(w)] for y in range(h)] 
     for i in range(len(docs)):
         for j in range(len(docs)):
             sim_matrix[i][j] = jaccard_similarity(docs[i],docs[j])
+            sim_matrix[j][i] = sim_matrix[i][j]
 
     return sim_matrix
 
 def simple_sim_for_doc_collection(docs):
-    w, h = 20000, 20000 
+    w = h = docs.shape[1]
     sim_matrix = [[0 for x in range(w)] for y in range(h)] 
     for i in range(len(docs)):
         for j in range(len(docs)):
             sim_matrix[i][j] = simple_similarity(docs[i],docs[j])
+            sim_matrix[j][i] = sim_matrix[i][j]
 
     return sim_matrix
 
