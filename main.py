@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import time
 import os
 import sys
@@ -13,17 +14,23 @@ import similarity
 import shingling
 
 def main():
-    num_shingles = 1
     num_hashes_list = [16,32,64,128,256]
     
     '''First step, create shingles'''
     
-    print "Constructing %d shingles..." %num_shingles
     with open('data/output/parsed_documents.txt') as f:
         parsed_documents = json.load(f)
     shuffle(parsed_documents)
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         parsed_documents = parsed_documents[:int(sys.argv[1])]
+        num_shingles = int(sys.argv[2])
+    elif len(sys.argv) > 1:
+        parsed_documents = parsed_documents[:int(sys.argv[1])]
+        num_shingles = 1
+    else:
+        num_shingles = 1
+
+    print "Constructing %d shingles..." %num_shingles
 
     #parsed_documents = \
     #[x for x in parsed_documents if 'topics' in x.keys() and 'cocoa' in
@@ -31,8 +38,10 @@ def main():
 
     shingled_docs, feature_names = \
         shingling.create_word_shingles(parsed_documents, num_shingles)
-
     #Save the shingles to data/shingles directory
+    del parsed_documents
+    del feature_names
+
     shingling.write_sparse_data_matrix_to_file(
         shingled_docs, str(num_shingles) + "_shingles")
 
@@ -51,15 +60,17 @@ def main():
             %(k, hash_creation_times[-1])
         minhashing.save_hashes(hashes)
 
+    del hashes
+    
     '''Compute Jaccard Similarity'''
     print "Computing Jaccard Similarity"
     time1 = time.time()
     jacc_sim_matrix = similarity.jacc_sim_for_doc_collection(shingled_docs)
     time2 = time.time()
     jacc_time = time2-time1
-    print "Time taken to compute jaccard similarity = %d" %jacc_time
-    filename = os.path.join(shingles_path, jaccard_similarity_file)
-    np.savetxt(filename, jacc_sim_matrix, fmt = "%0.2f", delimiter = ' ')
+    print "Time taken to compute jaccard similarity = %d secs" %jacc_time
+
+    del shingled_docs
     
     '''Compute k-hash similarities'''
     MSE = []
@@ -71,28 +82,39 @@ def main():
         k_hash_similarity = similarity.simple_sim_for_doc_collection(hashes)
         time2 = time.time() 
         hash_sim_times.append(time2-time1)
-        print "Time taken to compute %d hash similarity = %.2f"\
+        print "Time taken to compute %d hash similarity = %.2f secs"\
             %(k, hash_sim_times[-1])
         MSE.append(similarity.compute_MSE(jacc_sim_matrix, k_hash_similarity))
         print "MSE for %d hash = %.2e" %(k, MSE[-1])
-        filename = os.path.join(shingles_path, str(k)+'_hash_sim.dat')
-        np.savetxt(filename, k_hash_similarity, fmt = "%0.2f", delimiter = ' ')
+
+    del jacc_sim_matrix
+    del k_hash_similarity
 
     '''Graph the results'''
+    axes = plt.gca()
     plt.xscale('log')
     plt.xlabel('Number of Hashes (log scale)')
-    plt.ylabel('Mean Squared Error (linear scale)')
+    plt.ylabel('Mean Squared Error (in thousandths)')
+    formatter = FuncFormatter(thousandths)
+    axes.yaxis.set_major_formatter(formatter)
     plt.xticks(num_hashes_list, num_hashes_list)
     plt.plot(num_hashes_list, MSE)
-    plt.savefig('plots/MSE.png')
+    plt.savefig('plots/MSE' + str(num_shingles) + '.png')
 
     plt.clf()
     plt.xscale('log')
     plt.xlabel('Number of Hashes (log scale)')
-    plt.ylabel('Time Taken(linear scale)')
+    plt.ylabel('Time Taken(in secs)')
     plt.xticks(num_hashes_list, num_hashes_list)
-    plt.plot(num_hashes_list, hash_sim_times)
-    plt.savefig('plots/time.png')
+    plt.plot(num_hashes_list, hash_sim_times, 'b', label='k-Hash Similarity')
+    plt.plot(num_hashes_list, [jacc_time]*len(num_hashes_list),
+            'r', label='Jaccard Baseline')
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.)
+    plt.savefig('plots/time' + str(num_shingles) + '.png')
 
+def thousandths(x, pos):
+    return '%0.2f' %(x*1000)
+    
 if __name__ == "__main__":
     main()
