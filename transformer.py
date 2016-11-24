@@ -60,9 +60,8 @@ def convert_to_transaction(parsed_documents_with_topics):
     list_body = []
     topics_labels = []
     s = set()
-    nltk.download('punkt')
     with open(os.path.join(
-                        preprocessing_config.output_data_dir, "parsed_documents_with_topics_output.txt"), 'w') as f:
+                        preprocessing_config.output_data_dir, "sample_output.txt"), 'w') as f:
         for data_element in parsed_documents_with_topics:
             try:
                 list_body = []
@@ -87,10 +86,13 @@ def convert_to_transaction(parsed_documents_with_topics):
                 #filtered_words = [word for word in list_body if word not in stopwords.words('english')]
                 s = set(stemmed_words)
                 list_body = list(s)
+                list_body = [word for word in list_body if word not in stopwords.words('english')]
+                
+                topics_labels = [":" + str(word) for word in topics_labels]
                 
                 apriori_format_data = list_body + topics_labels
                 
-                f.write(str(apriori_format_data))
+                f.write(" ".join(apriori_format_data))
                 f.write('\n')
                 
                 #documents_as_string.append(document_string)
@@ -100,7 +102,7 @@ def convert_to_transaction(parsed_documents_with_topics):
     
 
 def main():
-    with open('data/output/parsed_documents_with_topics.txt') as f:
+    with open('data/output/sample.txt') as f:
         parsed_documents_with_topics = json.load(f)
     convert_to_transaction(parsed_documents_with_topics)
     
