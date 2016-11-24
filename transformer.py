@@ -3,7 +3,9 @@ import os
 import glob
 import json
 from nltk.corpus import stopwords
+import nltk
 import preprocessing_config
+from nltk.stem.porter import *
 
 # this function takes all .sgm files and it takes the reuter tag whose topic label is not empty, extract body, place, title and topic and store it in json format in parsed_documents_with_topics.txt file. 
 def remove_empty_topics():
@@ -25,19 +27,19 @@ def remove_empty_topics():
             del places[:]
             body = None
             data.clear()
-            if reuters.title != None:
+            if type(reuters.title) != type(None):
                 title = reuters.title.string
                 data["title"] = title
-            if reuters.topics != None:
+            if type(reuters.topics) != type(None):
                 for topic in reuters.topics.find_all('d'):
                     if topic.string != "":
                         topics.append(topic.string)
                         data["topics"] = list(topics)
-            if reuters.places != None:
+            if type(reuters.places) != type(None):
                 for place in reuters.places.find_all('d'):
                     places.append(place.string)
                     data["places"] = list(places)
-            if reuters.body != None:
+            if type(reuters.body) != type(None):
                 body = reuters.body.string.replace('\n', ' ')
                 data["body"] = body
 
@@ -58,7 +60,7 @@ def convert_to_transaction(parsed_documents_with_topics):
     list_body = []
     topics_labels = []
     s = set()
-    
+    nltk.download('punkt')
     with open(os.path.join(
                         preprocessing_config.output_data_dir, "parsed_documents_with_topics_output.txt"), 'w') as f:
         for data_element in parsed_documents_with_topics:
@@ -72,15 +74,21 @@ def convert_to_transaction(parsed_documents_with_topics):
                     
                     
                 if 'topics' in data_element.keys():
-                    topics_labels.append(",".join(data_element['topics']))
-                else:
-                    topics_labels.append("")
-                    
-                list_body = document_string.split()
-                s = set(list_body)
+                    #topics_labels.append(",".join(data_element['topics']))
+                    topics_labels += data_element['topics']
+                #else:
+                    #topics_labels.append("")
+                
+                
+                list_body = nltk.word_tokenize(document_string)
+                stemmer = PorterStemmer()
+                stop_word_filtered_words = [word for word in list_body if word not in stopwords.words('english')]
+                stemmed_words = [str(stemmer.stem(word)) for word in stop_word_filtered_words]
+                #filtered_words = [word for word in list_body if word not in stopwords.words('english')]
+                s = set(stemmed_words)
                 list_body = list(s)
-                filtered_words = [word for word in list_body if word not in stopwords.words('english')]
-                apriori_format_data = filtered_words + topics_labels
+                
+                apriori_format_data = list_body + topics_labels
                 
                 f.write(str(apriori_format_data))
                 f.write('\n')
