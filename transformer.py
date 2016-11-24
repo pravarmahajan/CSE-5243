@@ -60,8 +60,12 @@ def convert_to_transaction(parsed_documents_with_topics):
     list_body = []
     topics_labels = []
     s = set()
+    antecedents = set()
+    consequents = set()
+    
     with open(os.path.join(
-                        preprocessing_config.output_data_dir, "sample_output.txt"), 'w') as f:
+                        preprocessing_config.output_data_dir, "parsed_documents_with_topics_output.dat"), 'w') as f, open(os.path.join(preprocessing_config.output_data_dir, "appearance.txt"), 'w') as g:
+        article_id = 0
         for data_element in parsed_documents_with_topics:
             try:
                 list_body = []
@@ -73,14 +77,12 @@ def convert_to_transaction(parsed_documents_with_topics):
                     
                     
                 if 'topics' in data_element.keys():
-                    #topics_labels.append(",".join(data_element['topics']))
                     topics_labels += data_element['topics']
-                #else:
-                    #topics_labels.append("")
                 
-                
-                list_body = nltk.word_tokenize(document_string)
+                regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[a-z]+')
+                list_body = regex_tokenizer.tokenize(document_string)
                 stemmer = PorterStemmer()
+                
                 stop_word_filtered_words = [word for word in list_body if word not in stopwords.words('english')]
                 stemmed_words = [str(stemmer.stem(word)) for word in stop_word_filtered_words]
                 #filtered_words = [word for word in list_body if word not in stopwords.words('english')]
@@ -88,21 +90,33 @@ def convert_to_transaction(parsed_documents_with_topics):
                 list_body = list(s)
                 list_body = [word for word in list_body if word not in stopwords.words('english')]
                 
-                topics_labels = [":" + str(word) for word in topics_labels]
+                topics_labels = [":" + word for word in topics_labels]
                 
                 apriori_format_data = list_body + topics_labels
                 
-                f.write(" ".join(apriori_format_data))
+                f.write(str(article_id) + " " +  " ".join(apriori_format_data))
                 f.write('\n')
+                for word in list_body:
+                    antecedents.add(word)
+                
+                for topics_label in topics_labels:
+                    consequents.add(topics_label)
+                article_id += 1
                 
                 #documents_as_string.append(document_string)
     
             except Exception as e:
                 print(e)
+        
+        for word in antecedents:
+            g.write(word + " antecedent\n")
+        
+        for label in consequents:
+            g.write(label+ " consequent\n")
     
 
 def main():
-    with open('data/output/sample.txt') as f:
+    with open('data/output/parsed_documents_with_topics.txt') as f:
         parsed_documents_with_topics = json.load(f)
     convert_to_transaction(parsed_documents_with_topics)
     
