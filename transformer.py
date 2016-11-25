@@ -62,50 +62,44 @@ def convert_to_transaction(parsed_documents_with_topics):
     s = set()
     antecedents = set()
     consequents = set()
-    
-    with open(os.path.join(
-                        preprocessing_config.output_data_dir, "parsed_documents_with_topics_output.dat"), 'w') as f, open(os.path.join(preprocessing_config.output_data_dir, "appearance.txt"), 'w') as g:
-        article_id = 0
-        for data_element in parsed_documents_with_topics:
-            try:
-                list_body = []
-                topics_labels = []
-                apriori_format_data = []
-                document_string = ""
-                if 'body' in data_element.keys():
-                    document_string += data_element['body']
-                        
-                if 'topics' in data_element.keys():
-                    topics_labels += data_element['topics']
-                
-                regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[a-z]+')
-                list_body = regex_tokenizer.tokenize(document_string)
-                stemmer = PorterStemmer()
-                
-                stop_word_filtered_words = [word for word in list_body if word not in stopwords.words('english')]
-                stemmed_words = [str(stemmer.stem(word)) for word in stop_word_filtered_words]
-                #filtered_words = [word for word in list_body if word not in stopwords.words('english')]
-                s = set(stemmed_words)
-                list_body = list(s)
-                list_body = [word for word in list_body if word not in stopwords.words('english')]
-                
-                topics_labels = [":" + word for word in topics_labels]
-                
-                apriori_format_data = list_body + topics_labels
-                
-                f.write(str(article_id) + " " +  " ".join(apriori_format_data))
-                f.write('\n')
-                for word in list_body:
-                    antecedents.add(word)
-                
-                for topics_label in topics_labels:
-                    consequents.add(topics_label)
-                article_id += 1
-                
-    
-            except Exception as e:
-                print(e)
+    parsed_doc =  os.path.join(
+                    preprocessing_config.output_data_dir,
+                    "parsed_documents_with_topics_output.dat")
+    appearance_file = os.path.join(preprocessing_config.output_data_dir, "appearance.txt")
+
+    regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[a-z]+')
+    stemmer = PorterStemmer()
+    article_id = 0
+    stops = set(stopwords.words('english'))
+    lines = []
+    for data_element in parsed_documents_with_topics:
+        if 'topics' not in data_element.keys() or 'body' not in data_element.keys():
+            continue
         
+        list_body = set(regex_tokenizer.tokenize(data_element['body']))
+        topic_labels = data_element['topics']
+        
+        list_body -= stops
+        list_body = set(map(stemmer.stem, list_body))
+        
+        topic_labels = set([":" + word for word in topic_labels])
+        
+        antecedents |= list_body
+        consequents |= topic_labels
+        
+        list_body |= topic_labels
+        lines.append(' '.join(list_body))
+
+        article_id += 1
+        
+        if article_id % 1000 == 0:
+            print "finished working on document # %d" %article_id
+
+    with open(parsed_doc, 'w') as f:
+        f.writelines('\n'.join(lines))
+    
+    with open(appearance_file, 'w') as g:
+        g.write('antecedent\n')
         for word in antecedents:
             g.write(word + " antecedent\n")
         
@@ -122,14 +116,26 @@ def sort_rules(rules):
         c = float(s_c[1][0:-1])
         l.append((c,s,rule))
         
-    rules = sorted(l,key = lambda t:(-t[0],-t[1]))
+    rules = sorted(l,key = lambda t:(t[0], t[1]), reverse=True)
     rules = [x[2] for x in rules]
     print(rules)
     
         
 def main():
-    with open(os.path.join(
-                        preprocessing_config.output_data_dir,"rules.dat")) as f:
+    parsed_docs_file = os.path.join( 
+            preprocessing_config.output_data_dir,"parsed_documents.txt")
+
+    print "Loading parsed docs.."
+    with open(parsed_docs_file, 'r') as f:
+        parsed_docs = json.load(f)
+
+    print "creating transactions file"
+    convert_to_transaction(parsed_docs)
+
+    #print "executing apriori algorithm"
+    #execute_apriori
+    with open(os.path.join( 
+            preprocessing_config.output_data_dir,"rules.dat")) as f:
         rules = f.read().splitlines()
         sort_rules(rules)
     
