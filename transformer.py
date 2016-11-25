@@ -74,8 +74,7 @@ def convert_to_transaction(parsed_documents_with_topics):
                 document_string = ""
                 if 'body' in data_element.keys():
                     document_string += data_element['body']
-                    
-                    
+                        
                 if 'topics' in data_element.keys():
                     topics_labels += data_element['topics']
                 
@@ -103,7 +102,6 @@ def convert_to_transaction(parsed_documents_with_topics):
                     consequents.add(topics_label)
                 article_id += 1
                 
-                #documents_as_string.append(document_string)
     
             except Exception as e:
                 print(e)
@@ -114,10 +112,25 @@ def convert_to_transaction(parsed_documents_with_topics):
         for label in consequents:
             g.write(label+ " consequent\n")
     
-
+#this function will sort the rules
+def sort_rules(rules):
+    l = []
+    for rule in rules:
+        s_c = rule.split("(")[1]
+        s_c = s_c.split(",")
+        s = float(s_c[0])
+        c = float(s_c[1][0:-1])
+        l.append((c,s,rule))
+        
+    rules = sorted(l,key = lambda t:(-t[0],-t[1]))
+    rules = [x[2] for x in rules]
+    print(rules)
+    
+        
 def main():
-    with open('data/output/parsed_documents_with_topics.txt') as f:
-        parsed_documents_with_topics = json.load(f)
-    convert_to_transaction(parsed_documents_with_topics)
+    with open(os.path.join(
+                        preprocessing_config.output_data_dir,"rules.dat")) as f:
+        rules = f.read().splitlines()
+        sort_rules(rules)
     
 main()
