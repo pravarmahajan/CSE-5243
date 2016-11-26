@@ -6,6 +6,9 @@ from nltk.corpus import stopwords
 import nltk
 import preprocessing_config
 from nltk.stem.porter import *
+import subprocess
+import pdb
+import random
 
 # this function takes all .sgm files and it takes the reuter tag whose topic label is not empty, extract body, place, title and topic and store it in json format in parsed_documents_with_topics.txt file. 
 def remove_empty_topics():
@@ -62,9 +65,12 @@ def convert_to_transaction(parsed_documents_with_topics):
     s = set()
     antecedents = set()
     consequents = set()
-    parsed_doc =  os.path.join(
+    train_parsed_doc =  os.path.join(
                     preprocessing_config.output_data_dir,
-                    "parsed_documents_with_topics_output.dat")
+                    "train_parsed_documents_with_topics_output.dat")
+    test_parsed_doc =  os.path.join(
+                    preprocessing_config.output_data_dir,
+                    "test_parsed_documents_with_topics_output.dat")
     appearance_file = os.path.join(preprocessing_config.output_data_dir, "appearance.txt")
 
     regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[a-z]+')
@@ -75,28 +81,33 @@ def convert_to_transaction(parsed_documents_with_topics):
     for data_element in parsed_documents_with_topics:
         if 'topics' not in data_element.keys() or 'body' not in data_element.keys():
             continue
-        
+        if data_element['body'] == '':
+            continue
         list_body = set(regex_tokenizer.tokenize(data_element['body']))
         topic_labels = data_element['topics']
         
         list_body -= stops
-        list_body = set(map(stemmer.stem, list_body))
+        list_body = map(stemmer.stem, list_body)
         
-        topic_labels = set([":" + word for word in topic_labels])
+        topic_labels = [":" + word for word in topic_labels]
         
-        antecedents |= list_body
-        consequents |= topic_labels
+        antecedents |= set(list_body)
+        consequents |= set(topic_labels)
         
-        list_body |= topic_labels
-        lines.append(' '.join(list_body))
+        list_body = list_body + topic_labels
+        lines.append('%d ' %article_id + ' '.join(list_body))
 
         article_id += 1
         
         if article_id % 1000 == 0:
             print "finished working on document # %d" %article_id
 
-    with open(parsed_doc, 'w') as f:
-        f.writelines('\n'.join(lines))
+    random.shuffle(lines)
+    split_point = int(0.8*len(lines))
+    with open(train_parsed_doc, 'w') as f:
+        f.writelines('\n'.join(lines[:split_point]))
+    with open(test_parsed_doc, 'w') as f:
+        f.writelines('\n'.join(lines[split_point:]))
     
     with open(appearance_file, 'w') as g:
         g.write('antecedent\n')
@@ -107,36 +118,79 @@ def convert_to_transaction(parsed_documents_with_topics):
             g.write(label+ " consequent\n")
     
 #this function will sort the rules
-def sort_rules(rules):
+def sort_rules():
+    with open('data/output/rules.dat', 'r') as f:
+        rules = f.readlines()
     l = []
     for rule in rules:
+        rule = rule.strip()
         s_c = rule.split("(")[1]
         s_c = s_c.split(",")
         s = float(s_c[0])
-        c = float(s_c[1][0:-1])
-        l.append((c,s,rule))
+        c = float(s_c[1][:-1])
+        l.append((c, s, rule.split("(")[0].strip()))
         
-    rules = sorted(l,key = lambda t:(t[0], t[1]), reverse=True)
+    rules = sorted(l, key=lambda t:(t[0], t[1]), reverse=True)
     rules = [x[2] for x in rules]
-    print(rules)
+    with open(os.path.join(preprocessing_config.output_data_dir,"sorted_rules.dat"), 'w') as f:
+        f.writelines('\n'.join(rules))
+    return [r.split(' <- ') for r in rules]
     
-        
+def execute_apriori(support=10, confidence=30):
+    args = ['-tr', '-Rdata/output/appearance.txt',
+             '-c%d' %confidence,
+             '-s%d' %support,
+             'data/output/train_parsed_documents_with_topics_output.dat',
+             'data/output/rules.dat'
+             ]
+    p = subprocess.call(['./apriori' ] + args)
+
+def test():
+    rules = get_sorted_rules()
+    accuracy = 0
+    with open('data/output/test_parsed_documents_with_topics_output.dat') as f:
+        lines = map(str.strip, f.readlines())
+    for line in lines:
+        tokens = set(line.split())
+        consequent = set([t for t in tokens if t.startswith(':')])
+        antecedent = tokens-consequent
+        prediction = set()
+        for rule in rules:
+            if len(rule[0]-antecedent)==0:
+                prediction.add(rule[1])
+                
+        accuracy += float(len(prediction & consequent))/ \
+                    len(prediction | consequent)
+    accuracy /= len(lines)
+    print "Accuracy = %e" %accuracy
+
+def get_sorted_rules():
+    with open('data/output/sorted_rules.dat') as f:
+        lines = map(str.strip,f.readlines())
+
+    rules = []
+    for line in lines:
+        consequent, antecedent= map(str.strip, line.split('<-'))
+        antecedent = set(antecedent.split())
+        rules.append((antecedent, consequent))
+
+    return rules
+    
 def main():
-    parsed_docs_file = os.path.join( 
+    '''parsed_docs_file = os.path.join( 
             preprocessing_config.output_data_dir,"parsed_documents.txt")
 
     print "Loading parsed docs.."
     with open(parsed_docs_file, 'r') as f:
         parsed_docs = json.load(f)
-
+   
     print "creating transactions file"
     convert_to_transaction(parsed_docs)
-
-    #print "executing apriori algorithm"
-    #execute_apriori
-    with open(os.path.join( 
-            preprocessing_config.output_data_dir,"rules.dat")) as f:
-        rules = f.read().splitlines()
-        sort_rules(rules)
+    '''
+    print "executing apriori algorithm"
+    execute_apriori(2, 80)
+    
+    sorted_rules = sort_rules()
+    test()
     
 main()
