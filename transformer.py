@@ -73,10 +73,11 @@ def convert_to_transaction(parsed_documents_with_topics):
                     "test_parsed_documents_with_topics_output.dat")
     appearance_file = os.path.join(preprocessing_config.output_data_dir, "appearance.txt")
 
-    regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[a-z]+')
+    regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'[A-Za-z]+')
     stemmer = PorterStemmer()
     article_id = 0
     stops = set(stopwords.words('english'))
+    stops.add('Reuter')
     lines = []
     for data_element in parsed_documents_with_topics:
         if 'topics' not in data_element.keys() or 'body' not in data_element.keys():
@@ -177,7 +178,7 @@ def get_sorted_rules():
     return rules
     
 def main():
-    '''parsed_docs_file = os.path.join( 
+    parsed_docs_file = os.path.join( 
             preprocessing_config.output_data_dir,"parsed_documents.txt")
 
     print "Loading parsed docs.."
@@ -186,7 +187,7 @@ def main():
    
     print "creating transactions file"
     convert_to_transaction(parsed_docs)
-    '''
+    
     print "executing apriori algorithm"
     execute_apriori(2, 80)
     
